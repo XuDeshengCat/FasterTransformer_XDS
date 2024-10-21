@@ -30,22 +30,24 @@ template<typename T>
 class FusedAttentionLayer: public BaseAttentionLayer<T> {
 private:
     // metadata
-    size_t head_num_;
-    size_t size_per_head_;
-    size_t d_model_;
-    bool   sparse_;
+    size_t head_num_;  // 头数
+    size_t size_per_head_;  // 每个头的size/特征维度
+    size_t d_model_;    // 模型的总特征维度？
+    bool   sparse_;  // 是否稀疏
 
     // calculated params
-    size_t hidden_units_;
+    size_t hidden_units_;  // 也是总特征维度？
 
+    // 内存缓冲区分配与释放
     void allocateBuffer() override;
     void freeBuffer() override;
     void allocateBuffer(size_t batch_size, size_t seq_len);
 
-    int                        sm_;
-    float                      q_scaling_;
-    std::unique_ptr<MHARunner> dispatcher_fp16;
+    int                        sm_;     // GPU 的 sm 信息
+    float                      q_scaling_;  // Q向量的缩放因子
+    std::unique_ptr<MHARunner> dispatcher_fp16; // 负责 fp16 计算的指针
 
+    // 从 BaseAttentionLayer 中继承的成员
     using BaseAttentionLayer<T>::stream_;
     using BaseAttentionLayer<T>::is_free_buffer_after_forward_;
     using BaseAttentionLayer<T>::is_allocate_buffer_;
@@ -69,6 +71,7 @@ protected:
     T** batch_qkv_buf_ptr_    = nullptr;
 
 public:
+    // 构造函数
     FusedAttentionLayer(size_t           max_batch_size,
                         size_t           max_seq_len,
                         size_t           head_num,
@@ -84,13 +87,14 @@ public:
 
     FusedAttentionLayer(FusedAttentionLayer<T> const& attention_layer);
 
+    // 析构函数
     ~FusedAttentionLayer();
 
     void
     forward(TensorMap* output_tensors, TensorMap* input_tensors, const AttentionWeight<T>* attention_weights) override;
 
-    void invokeTrtAddQkvBias(size_t token_num, const AttentionWeight<T>* attention_weights);
-    bool isValidSeqLen(const size_t seq_len) override;
+    void invokeTrtAddQkvBias(size_t token_num, const AttentionWeight<T>* attention_weights);    // 处理 QKV 偏置
+    bool isValidSeqLen(const size_t seq_len) override;      // 检查序列长度是否有效
 };
 
 }  // namespace fastertransformer

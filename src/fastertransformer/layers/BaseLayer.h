@@ -12,6 +12,8 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+
+ 提供了一些基础设施（如流、cuBLAS支持、内存分配等）供派生层使用，同时强制派生类实现缓冲区管理方法。
  */
 
 #pragma once

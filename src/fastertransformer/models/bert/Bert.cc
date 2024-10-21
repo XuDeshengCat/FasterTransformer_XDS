@@ -19,6 +19,12 @@
 
 namespace fastertransformer {
 
+/*
+    initialize()函数的逻辑：
+    - 如果 T 类型为 half，并且 attention_type_ 是 FUSED_MHA 或 FUSED_PADDED_MHA，初始化 fused_attention_layer_ 为 FusedAttentionLayer<T>。    
+    - 无条件初始化 unfused_attention_layer_ 为 UnfusedAttentionLayer<T>。
+    - 根据 activation_type_ 选择不同类型的 FFN 层：如果是 Gelu，则初始化为 TensorParallelGeluFfnLayer<T>； 如果是 Relu，则初始化为 TensorParallelReluFfnLayer<T>。
+*/
 template<typename T>
 void Bert<T>::initialize()
 {
@@ -90,6 +96,7 @@ void Bert<T>::initialize()
     }
 }
 
+// 构造函数，根据输入给成员变量赋值，这里的成员函数是在头文件里的class定义中定义好的
 template<typename T>
 Bert<T>::Bert(size_t                              max_batch_size,
               size_t                              max_seq_len,
@@ -171,6 +178,7 @@ Bert<T>::Bert(size_t           max_batch_size,
 {
 }
 
+// 使用委托构造函数，从一个已有的 Bert 对象 bert 复制创建一个新的 Bert 对象
 template<typename T>
 Bert<T>::Bert(Bert<T> const& bert):
     Bert(0,
@@ -213,6 +221,7 @@ void Bert<T>::allocateBuffer()
     FT_CHECK(false);
 }
 
+// 根据 batch_size 和 seq_len 分配内存缓冲区
 template<typename T>
 void Bert<T>::allocateBuffer(size_t batch_size, size_t seq_len)
 {
@@ -243,6 +252,7 @@ void Bert<T>::allocateBuffer(size_t batch_size, size_t seq_len)
     is_allocate_buffer_ = true;
 }
 
+// 释放内存缓冲区
 template<typename T>
 void Bert<T>::freeBuffer()
 {
@@ -302,6 +312,7 @@ int Bert<T>::getFirstLayerParallelId()
     return local_num_layer * pipeline_para_.rank_;
 }
 
+// forward 函数， 用来从输入中提取张量，并创建一个键值对映射
 template<typename T>
 void Bert<T>::forward(std::vector<Tensor>*       output_tensors,
                       const std::vector<Tensor>* input_tensors,
@@ -322,6 +333,7 @@ void Bert<T>::forward(TensorMap* output_tensors, TensorMap* input_tensors, const
     // output tensors:
     //      output_hidden_state [batch, seqlen, hidden]
 
+    // 检查输入形状
     FT_LOG_DEBUG(__PRETTY_FUNCTION__);
     const size_t request_batch_size = input_tensors->at("input_hidden_state").shape[0];
     const size_t request_seq_len    = input_tensors->at("input_hidden_state").shape[1];
@@ -529,6 +541,7 @@ void Bert<T>::forward(TensorMap* output_tensors, TensorMap* input_tensors, const
                                                       &bert_weights->bert_layer_weights[l].attention_weights);
                 }
 
+                // 处理 All-Reduce 操作，用于在分布式计算中跨设备聚合数据
                 if (tensor_para_.world_size_ > 1) {
                     if (!use_custom_all_reduce_kernel) {
                         ftNcclAllReduceSum(
@@ -542,6 +555,7 @@ void Bert<T>::forward(TensorMap* output_tensors, TensorMap* input_tensors, const
                 }
             }
 
+            // 根据情况调用layernorm
             if (layernorm_type_ == LayerNormType::post_layernorm) {
                 invokeAddBiasResidualLayerNorm(
                     attn_out_buf_,
@@ -589,7 +603,7 @@ void Bert<T>::forward(TensorMap* output_tensors, TensorMap* input_tensors, const
                 ffn_layer_->forward(
                     &ffn_output_tensors, &ffn_input_tensors, &bert_weights->bert_layer_weights[l].ffn_weights);
             }
-
+            // 根据情况调用 layernorm
             if (layernorm_type_ == LayerNormType::post_layernorm) {
                 invokeAddBiasResidualLayerNorm(out_tensor,
                                                attn_out_buf_,

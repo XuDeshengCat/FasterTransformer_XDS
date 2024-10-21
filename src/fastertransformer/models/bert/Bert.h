@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+// 确保此头文件 在编译过程中只被包含一次
 #pragma once
 
 #include <vector>
@@ -33,34 +34,36 @@ template<typename T>
 class Bert: public BaseLayer {
 private:
     // meta data
-    size_t                 head_num_;
-    size_t                 size_per_head_;
-    size_t                 inter_size_;
+    size_t                 head_num_; // 头的数量
+    size_t                 size_per_head_; // 头的大小
+    size_t                 inter_size_;  // 
     size_t                 hidden_units_;
     size_t                 num_layer_;
     int                    sm_;
-    static constexpr float layernorm_eps_ = 1e-6f;
-    float                  q_scaling_;
-    AttentionType          attention_type_;
-    bool                   sparse_;
+    static constexpr float layernorm_eps_ = 1e-6f; // Layernorm 的小偏移量，避免分母为零
+    float                  q_scaling_;  // 用于注意力因子的缩放分数
+    AttentionType          attention_type_;  // 注意力类型
+    bool                   sparse_; // 是否使用稀疏计算
 
+    // 指向 各个层的 指针
     BaseAttentionLayer<T>* unfused_attention_layer_ = nullptr;
     BaseAttentionLayer<T>* fused_attention_layer_   = nullptr;
     FfnLayer<T>*           ffn_layer_;
 
-    bool is_allocate_buffer_ = false;
+    bool is_allocate_buffer_ = false;   // 标志是否分配缓冲区
 
+    // 用于 NCCL 通信的参数和自定义 all-reduce 通信标志
     NcclParam                           tensor_para_;
-    NcclParam                           pipeline_para_;
+    NcclParam                           pipeline_para_; 
     std::shared_ptr<AbstractCustomComm> custom_all_reduce_comm_;
     bool                                enable_custom_all_reduce_;
 
-    void allocateBuffer();
-    void freeBuffer();
-    void initialize();
+    void allocateBuffer();  // 内存分配
+    void freeBuffer();    // 内存释放
+    void initialize();  // 初始化类成员变量
 
-    const ActivationType activation_type_;
-    const LayerNormType  layernorm_type_;
+    const ActivationType activation_type_;  // 激活函数类型
+    const LayerNormType  layernorm_type_;   // Layernorm 类型
 
     void allocateBuffer(size_t batch_size, size_t seq_len);
     bool isValidLayerParallelId(uint l);
@@ -82,6 +85,7 @@ protected:
     T* normed_attn_out_buf_ = nullptr;
 
 public:
+    // 构造函数的实现方式，上面这种比下面多了最后四行参数
     Bert(size_t                              max_batch_size,
          size_t                              max_seq_len,
          size_t                              head_num,
@@ -124,6 +128,7 @@ public:
 
     ~Bert();
 
+    // 两种形式的 forward 函数，输入类型为 std::vector<Tensor>  或者 TensorMap
     void forward(std::vector<Tensor>*       output_tensors,
                  const std::vector<Tensor>* input_tensors,
                  const BertWeight<T>*       bert_weights);

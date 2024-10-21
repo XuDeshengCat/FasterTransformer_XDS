@@ -30,6 +30,7 @@
 
 namespace fastertransformer {
 
+// 定义4种 attention 类型
 enum class AttentionType {
     UNFUSED_MHA,
     UNFUSED_PADDED_MHA,
@@ -41,6 +42,15 @@ enum class AttentionType {
 1. only swin-style relative position bias is supported currently
 2. gpt-style (causal-mask) models support any-sequence-length fmha, so we don't need to call isValidSeqLen at run-time
 3. bert/vit can also support any-seq-length fmha
+
+getAttentionType 函数的输入：
+    size_per_head: 每个注意力头的尺寸。
+    sm: Streaming Multiprocessor的架构版本。
+    remove_padding: 是否去除输入中的填充。
+    max_seq_len: 最大序列长度。
+    is_fuse: 是否使用融合的多头注意力。
+    with_swin_relative_position_bias: 是否使用Swin Transformer风格的相对位置偏移。
+    causal_mask: 是否使用因果掩码（针对GPT风格的自回归模型）。
 */
 template<typename T>
 AttentionType getAttentionType(size_t     size_per_head,
